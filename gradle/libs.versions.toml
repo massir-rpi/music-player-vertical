@@ -31,6 +31,8 @@ cast = "21.5.0"
 roomVersion = "2.6.1"
 ui = "1.6.8"
 uiTooling = "1.6.8"
+navigationRuntimeKtx = "2.8.4"
+navigationComposeVersion = "2.8.4"
 
 
 [libraries]
@@ -86,6 +88,8 @@ coil-svg = { group = "io.coil-kt", name = "coil-svg", version.ref = "coil" }
 play-services-cast-framework = { group = "com.google.android.gms", name = "play-services-cast-framework", version.ref = "cast" }
 ui = { module = "androidx.compose.ui:ui", version.ref = "ui" }
 ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling", version.ref = "uiTooling" }
+androidx-navigation-runtime-ktx = { group = "androidx.navigation", name = "navigation-runtime-ktx", version.ref = "navigationRuntimeKtx" }
+navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationComposeVersion" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
