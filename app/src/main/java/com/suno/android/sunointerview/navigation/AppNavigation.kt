@@ -1,5 +1,6 @@
 package com.suno.android.sunointerview.navigation
 
-sealed class Screen(val route: String) {
-    data object Playback: Screen(route = "playback")
+sealed class Destination(val route: String) {
+    data object MainNavGraph: Destination(route = "mainNavGraph")
+    data object Playback: Destination(route = "playback")
 }

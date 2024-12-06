@@ -1,6 +1,6 @@
-package com.suno.android.sunointerview
-import kotlinx.serialization.Serializable
+package com.suno.android.sunointerview.api
 
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
 
 

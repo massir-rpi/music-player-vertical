@@ -7,13 +7,13 @@ import androidx.navigation.navigation
 import com.suno.android.sunointerview.music.PlaybackScreen
 
 fun NavGraphBuilder.addPlaybackTopLevel(
-    navController: NavController
+    navController: NavController,
 ) {
     navigation(
-        route = Screen.Playback.route,
-        startDestination = Screen.Playback.route
+        route = Destination.MainNavGraph.route,
+        startDestination = Destination.Playback.route,
     ) {
-        composable(Screen.Playback.route) {
+        composable(Destination.Playback.route) {
             PlaybackScreen(navController = navController)
         }
     }
