@@ -1,8 +1,10 @@
 package com.suno.android.sunointerview.music
 
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.exoplayer.ExoPlayer
@@ -20,12 +22,17 @@ class PlaybackViewModel @Inject constructor(
     private val _uiStateFlow = MutableStateFlow(PlaybackUiState())
     val uiStateFlow = _uiStateFlow.asStateFlow()
 
-    private var page = 0
     private lateinit var player: ExoPlayer
 
+    private var numPages = 0
+    var numSongs = 0
+        private set
+
     fun setPlayer(player: ExoPlayer) {
+        Log.d(SCREEN_NAME, "Setting player in view model")
         this.player = player
-        nextSong()
+        // Load first page and start playing the first song after setting the player
+        loadNextPage(0)
     }
 
     fun togglePlaying() {
@@ -34,38 +41,48 @@ class PlaybackViewModel @Inject constructor(
         player.playWhenReady = notIsPlaying
         _uiStateFlow.value = uiState.copy(
             isPlaying = notIsPlaying,
-            metadata = uiState.metadata,
+            metadataList = uiState.metadataList,
         )
     }
 
-    fun nextSong() {
-        if (!player.hasNextMediaItem()) {
-            loadNextPage()
+    fun seekToMediaItem(index: Int) {
+        // Load the next page of songs if we're near the end of the current page
+        Log.d(SCREEN_NAME, "View model seekToMediaItem called wiht index $index on playlist of size ${player.mediaItemCount}")
+        if (index >= player.mediaItemCount - 2) {
+            loadNextPage(index)
         } else {
-            player.seekToNextMediaItem()
-        }
-    }
-
-    private fun loadNextPage() {
-        page += 1
-        viewModelScope.launch {
-            musicRepository.getSongs(page, SONGS_PER_PAGE).body()?.songs?.let {
-                loadMediaIntoPlayer(player, it)
+            // Seek to the song at the given index
+            Log.d(SCREEN_NAME, "Seeking to $index in playlist of size ${player.mediaItemCount}")
+            player.seekTo(index, C.TIME_UNSET)
+            // Always auto-play next song
+            if (!uiStateFlow.value.isPlaying) {
+                togglePlaying()
             }
         }
     }
 
-    private fun loadMediaIntoPlayer(exoPlayer: ExoPlayer, songs: List<Song?>) {
-        exoPlayer.addMediaItems(songsToMediaList(songs))
-        exoPlayer.prepare()
-        if (player.hasPreviousMediaItem()) player.seekToNextMediaItem()
-        player.playWhenReady = true
+    private fun loadNextPage(indexSeekTo: Int) {
+        viewModelScope.launch {
+            Log.d(SCREEN_NAME, "Loading next page")
+            musicRepository.getSongs(numPages, SONGS_PER_PAGE).body()?.songs?.let {
+                numPages += 1
+                numSongs += SONGS_PER_PAGE
+                loadMediaIntoPlayer(it)
+                seekToMediaItem(indexSeekTo)
+            }
+        }
+    }
 
-        val uiState = _uiStateFlow.value
-        _uiStateFlow.value = uiState.copy(
-            isPlaying = true, // always auto-play next song
-            metadata = player.mediaMetadata
-        )
+    private fun loadMediaIntoPlayer(songs: List<Song?>) {
+        Log.d(SCREEN_NAME, "Adding page to media list and preparing for playback")
+        // Map API response objects to Media3 MediaItems
+        val mediaItems = songsToMediaList(songs)
+        // Add MediaItems to the playlist and prepare the player
+        player.addMediaItems(mediaItems)
+        player.prepare()
+        // Autoplay the next song
+        player.playWhenReady = true
+        updateUiMediaList(mediaItems)
     }
 
     private fun songsToMediaList(songs: List<Song?>) = songs.mapNotNull { songNullable ->
@@ -85,7 +102,17 @@ class PlaybackViewModel @Inject constructor(
         }
     }
 
+    private fun updateUiMediaList(mediaItems: List<MediaItem>) {
+        Log.d(SCREEN_NAME, "Updating media item list for UI recomposition")
+        val uiState = _uiStateFlow.value
+        _uiStateFlow.value = uiState.copy(
+            isPlaying = true, // always auto-play next song
+            metadataList = uiState.metadataList + mediaItems.map { it.mediaMetadata }
+        )
+    }
+
     private companion object {
+        const val SCREEN_NAME = "PlaybackViewModel"
         const val SONGS_PER_PAGE = 10
     }
 }

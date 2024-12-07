@@ -4,5 +4,5 @@ import androidx.media3.common.MediaMetadata
 
 data class PlaybackUiState (
     val isPlaying: Boolean = true,
-    val metadata: MediaMetadata? = null,
+    val metadataList: List<MediaMetadata> = emptyList(),
 )
