@@ -10,12 +10,12 @@ plugins {
 
 android {
     namespace = "com.suno.android.sunointerview"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.suno.android.sunointerview"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -35,8 +35,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
         jvmTarget = "1.8"
@@ -59,9 +59,11 @@ android {
 
 dependencies {
 
-    implementation(libs.androidx.navigation.runtime.ktx)
     implementation(libs.androidx.hilt.navigation.compose)
-    implementation(libs.navigation.compose)
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.ui)
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.navigation.runtime.ktx)
     ksp(libs.dagger.hilt.compiler)
 
     implementation(libs.androidx.core.ktx)
