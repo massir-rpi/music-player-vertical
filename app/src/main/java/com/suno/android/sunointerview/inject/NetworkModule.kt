@@ -5,7 +5,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import kotlinx.serialization.json.Json
-import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
@@ -29,7 +29,7 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideRetrofitBuilder(json: Json): Retrofit.Builder = Retrofit.Builder()
-        .addConverterFactory(json.asConverterFactory(MediaType.get("application/json")))
+        .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
 
     @Provides
     @Singleton
