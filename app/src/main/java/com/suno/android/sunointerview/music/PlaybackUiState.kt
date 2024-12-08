@@ -1,10 +1,21 @@
 package com.suno.android.sunointerview.music
 
-import androidx.media3.common.MediaMetadata
+import android.net.Uri
 
 data class PlaybackUiState (
     val isPlaying: Boolean = true,
     val currentTime: Float = 0F,
     val currentMediaIndex: Int = 0,
-    val metadataList: List<MediaMetadata> = emptyList(),
+    val metadataList: List<SongMetadata> = emptyList(),
+)
+
+data class SongMetadata (
+    val avatarImageUri: Uri? = null,
+    val authorName: String? = null,
+    val durationMs: Float? = null,
+    val imageUri: Uri? = null,
+    val isLiked: Boolean? = null,
+    val isDisliked: Boolean? = null,
+    val title: String? = null,
+    val upvoteCount: Int? = null,
 )

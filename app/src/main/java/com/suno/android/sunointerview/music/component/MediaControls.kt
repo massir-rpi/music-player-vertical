@@ -27,7 +27,7 @@ private const val DEFAULT_DURATION = 240000F
 fun MediaControls(
     playing: Boolean,
     currentTimeMs: Float,
-    duration: Long?,
+    duration: Float?,
     onTimeChange: ((Float) -> Unit),
     onTimeFinalized: (() -> Unit),
     onPlayingChanged: ((Boolean) -> Unit),
@@ -107,7 +107,7 @@ private fun ReplayButton(
 @Composable
 private fun SeekBar(
     currentTimeMs: Float,
-    duration: Long?,
+    duration: Float?,
     onTimeChange: ((Float) -> Unit),
     onTimeFinalized: (() -> Unit),
     modifier: Modifier = Modifier,
@@ -123,7 +123,7 @@ private fun SeekBar(
             value = currentTimeMs,
             onValueChange = onTimeChange,
             onValueChangeFinished = onTimeFinalized,
-            valueRange = 0F..(duration?.toFloat() ?: DEFAULT_DURATION),
+            valueRange = 0F..(duration ?: DEFAULT_DURATION),
             modifier = Modifier
                 .fillMaxWidth(0.75F)
                 .constrainAs(sliderRef) {

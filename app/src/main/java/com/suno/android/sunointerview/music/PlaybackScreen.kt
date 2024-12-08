@@ -31,7 +31,6 @@ import androidx.compose.ui.unit.Density
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.media3.common.MediaMetadata
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
@@ -88,27 +87,24 @@ fun PlaybackScreenPreview() {
                 isPlaying = true,
                 currentTime = 152000F,
                 metadataList = listOf(
-                    MediaMetadata.Builder()
-                        .setTitle("I Spent 3000 Credits on This Song")
-                        .setArtworkUri(Uri.parse("https://cdn1.suno.ai/ffa48fbf-ac87-4a02-8cf2-f3766f518d58_c134aeb8.png"))
-                        .setArtist("nanashi_zero")
-                        .setDescription("Catchy Instrumental intro. electro swing. sweet female vocal, witch house")
-                        .setDurationMs(184920L)
-                        .build(),
-                    MediaMetadata.Builder()
-                        .setTitle("Chemical Elements")
-                        .setArtworkUri(Uri.parse("https://cdn1.suno.ai/5f324463-08a7-490e-b9c5-f8e2d399baa9_4fba4ab7.png"))
-                        .setArtist("nanashi_zero")
-                        .setDescription("Catchy Instrumental intro. opera. fire. darkjazz")
-                        .setDurationMs(144960L)
-                        .build(),
-                    MediaMetadata.Builder()
-                        .setTitle("Magical Potion [SSC3, Australia]")
-                        .setArtworkUri(Uri.parse("https://cdn1.suno.ai/40e5fbba-e780-46ff-8ec6-4308ec05dad4_2569e084.png"))
-                        .setArtist("nanashi_zero")
-                        .setDescription("Catchy Instrumental intro. [electro swing- witch house]. sweet female vocal, [witch house]")
-                        .setDurationMs(192200L)
-                        .build(),
+                    SongMetadata(
+                        title = "I Spent 3000 Credits on This Song",
+                        imageUri = Uri.parse("https://cdn1.suno.ai/ffa48fbf-ac87-4a02-8cf2-f3766f518d58_c134aeb8.png"),
+                        authorName = "nanashi_zero",
+                        durationMs = 184920F,
+                    ),
+                    SongMetadata(
+                        title = "Chemical Elements",
+                        imageUri = Uri.parse("https://cdn1.suno.ai/5f324463-08a7-490e-b9c5-f8e2d399baa9_4fba4ab7.png"),
+                        authorName = "nanashi_zero",
+                        durationMs = 144960F,
+                    ),
+                    SongMetadata(
+                        title = "Magical Potion [SSC3, Australia]",
+                        imageUri = Uri.parse("https://cdn1.suno.ai/40e5fbba-e780-46ff-8ec6-4308ec05dad4_2569e084.png"),
+                        authorName = "nanashi_zero",
+                        durationMs = 192200F,
+                    ),
                 ),
             ),
             onPlayingChanged = {},
@@ -176,7 +172,7 @@ private fun Screen(
 @OptIn(UnstableApi::class)
 @Composable
 private fun MediaPlayer(
-    metadata: MediaMetadata,
+    metadata: SongMetadata,
     isPlaying: Boolean,
     currentTimeMs: Float,
     onTimeChange: ((Float) -> Unit),
@@ -187,9 +183,9 @@ private fun MediaPlayer(
 ) {
     ConstraintLayout(modifier = modifier) {
         val (imageRef, titleRef, controlsRef) = createRefs()
-        val titleString = metadata.title?.let { remember { it.toString() } }
+        val titleString = metadata.title?.let { remember { it } }
 
-        metadata.artworkUri?.let { imageUri ->
+        metadata.imageUri?.let { imageUri ->
             AsyncImage(
                 model = run {
                     val context = LocalContext.current

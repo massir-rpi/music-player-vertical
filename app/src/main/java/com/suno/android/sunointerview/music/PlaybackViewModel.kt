@@ -107,13 +107,13 @@ class PlaybackViewModel @Inject constructor(
     private fun loadMediaIntoPlayer(songs: List<Song?>) {
         Log.d(SCREEN_NAME, "Adding page to media list and preparing for playback")
         // Map API response objects to Media3 MediaItems
-        val mediaItems = songsToMediaList(songs)
+        val mediaList = songsToMediaList(songs)
         // Add MediaItems to the playlist and prepare the player
-        player.addMediaItems(mediaItems)
+        player.addMediaItems(mediaList.map { it.first })
         player.prepare()
         // Autoplay the next song
         player.playWhenReady = true
-        updateUiMediaList(mediaItems)
+        updateUiMediaList(mediaList.map { it.second })
     }
 
     @OptIn(UnstableApi::class)
@@ -131,16 +131,26 @@ class PlaybackViewModel @Inject constructor(
                         song.metadata?.duration?.let { setDurationMs((it * MILLIS_IN_SECOND).toLong()) }
                     }.build()
                 )
-            }.build()
+            }.build() to
+            SongMetadata(
+                avatarImageUri = song.avatarImageUrl?.let { Uri.parse(it) },
+                authorName = song.displayName,
+                durationMs = song.metadata?.duration?.let { (it * MILLIS_IN_SECOND).toFloat() },
+                imageUri = song.imageUrl?.let { Uri.parse(it) },
+                isLiked = song.isLiked,
+                isDisliked = song.isTrashed,
+                title = song.title,
+                upvoteCount = song.upvoteCount,
+            )
         }
     }
 
-    private fun updateUiMediaList(mediaItems: List<MediaItem>) {
+    private fun updateUiMediaList(metadataList: List<SongMetadata>) {
         Log.d(SCREEN_NAME, "Updating media item list for UI recomposition")
         val uiState = _uiStateFlow.value
         _uiStateFlow.value = uiState.copy(
             isPlaying = true, // always auto-play next song
-            metadataList = uiState.metadataList + mediaItems.map { it.mediaMetadata },
+            metadataList = uiState.metadataList + metadataList,
         )
     }
 
