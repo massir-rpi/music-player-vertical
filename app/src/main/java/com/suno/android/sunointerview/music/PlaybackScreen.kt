@@ -37,6 +37,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.suno.android.sunointerview.R
+import com.suno.android.sunointerview.music.component.AuthorCard
 import com.suno.android.sunointerview.music.component.MediaControls
 import com.suno.android.sunointerview.ui.theme.SunoInterviewTheme
 import kotlin.math.roundToInt
@@ -182,7 +183,7 @@ private fun MediaPlayer(
     modifier: Modifier = Modifier,
 ) {
     ConstraintLayout(modifier = modifier) {
-        val (imageRef, titleRef, controlsRef) = createRefs()
+        val (imageRef, titleRef, authorRef, controlsRef) = createRefs()
         val titleString = metadata.title?.let { remember { it } }
 
         metadata.imageUri?.let { imageUri ->
@@ -200,7 +201,7 @@ private fun MediaPlayer(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(RoundedCornerShape(dimensionResource(R.dimen.corner_clip)))
+                    .clip(RoundedCornerShape(dimensionResource(R.dimen.large_corner_clip)))
                     .constrainAs(imageRef) {
                         linkTo(
                             start = parent.start,
@@ -220,10 +221,25 @@ private fun MediaPlayer(
                     .padding(dimensionResource(R.dimen.std_padding))
                     .constrainAs(titleRef) {
                         start.linkTo(parent.start)
-                        bottom.linkTo(controlsRef.top)
+                        bottom.linkTo(authorRef.top)
                     },
             )
         }
+
+        AuthorCard(
+            avatarImageUri = metadata.avatarImageUri,
+            authorName = metadata.authorName,
+            modifier = Modifier
+                .padding(
+                    start = dimensionResource(R.dimen.std_padding),
+                    end = dimensionResource(R.dimen.std_padding),
+                    bottom = dimensionResource(R.dimen.large_padding),
+                )
+                .constrainAs(authorRef) {
+                    start.linkTo(parent.start)
+                    bottom.linkTo(controlsRef.top)
+                }
+        )
 
         MediaControls(
             playing = isPlaying,

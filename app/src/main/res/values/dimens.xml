@@ -1,8 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Pager -->
     <dimen name="page_spacing">7dp</dimen>
     <dimen name="page_padding">7dp</dimen>
-    <dimen name="corner_clip">20dp</dimen>
+
+    <!-- Clip -->
+    <dimen name="large_corner_clip">20dp</dimen>
+    <dimen name="small_corner_clip">10dp</dimen>
+
+    <!-- Padding -->
     <dimen name="std_padding">16dp</dimen>
     <dimen name="large_padding">32dp</dimen>
+    <dimen name="small_padding">3dp</dimen>
+
+    <!-- Misc -->
+    <dimen name="avatar_size">40dp</dimen>
 </resources>
