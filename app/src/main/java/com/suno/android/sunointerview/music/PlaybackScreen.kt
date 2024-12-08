@@ -15,6 +15,7 @@ import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -49,17 +50,17 @@ import com.suno.android.sunointerview.ui.theme.SunoInterviewTheme
 import kotlin.math.roundToInt
 
 private const val SCREEN_NAME = "PlaybackScreen"
-private const val PLAYER_HEIGHT = 0.875F
+private const val PLAYER_HEIGHT_RATIO = 0.925F
 private const val MILLIS_IN_MINUTE = 60000
 private const val MILLIS_IN_SECOND = 1000
 private const val DEFAULT_DURATION = 240000F
 
-private val sevenEighthsPageSize = object : PageSize {
+private val fractionalPageSize = object : PageSize {
     override fun Density.calculateMainAxisPageSize(
         availableSpace: Int,
         pageSpacing: Int,
     ): Int {
-        return ((availableSpace - 2 * pageSpacing) * PLAYER_HEIGHT).roundToInt()
+        return ((availableSpace - 2 * pageSpacing) * PLAYER_HEIGHT_RATIO).roundToInt()
     }
 }
 
@@ -79,6 +80,7 @@ fun PlaybackScreen(
     Screen(
         uiState = uiState,
         onPlayingChanged = { viewModel.togglePlaying() },
+        onReplayTapped = { viewModel.seekToStart() },
         onPageSelected = { viewModel.seekToMediaItem(it) },
         onTimeChange = { viewModel.onSliderDrag(it) },
         onTimeFinalized = { viewModel.seekToSlider() },
@@ -120,6 +122,7 @@ fun PlaybackScreenPreview() {
                 ),
             ),
             onPlayingChanged = {},
+            onReplayTapped = {},
             onPageSelected = {},
             onTimeChange = {},
             onTimeFinalized = {},
@@ -132,6 +135,7 @@ fun PlaybackScreenPreview() {
 private fun Screen(
     uiState: PlaybackUiState,
     onPlayingChanged: ((Boolean) -> Unit),
+    onReplayTapped: (() -> Unit),
     onPageSelected: ((Int) -> Unit),
     onTimeChange: ((Float) -> Unit),
     onTimeFinalized: (() -> Unit),
@@ -145,8 +149,10 @@ private fun Screen(
     ) { innerPadding ->
         val pagerState = rememberPagerState { getNumSongs() }
 
+        // Seek to song in playlist when scrolling through pager
         LaunchedEffect(pagerState) {
             snapshotFlow { pagerState.currentPage }.collect { page ->
+                Log.d(SCREEN_NAME, "Selecting song $page out of ${uiState.metadataList.size}")
                 onPageSelected(page)
             }
         }
@@ -154,7 +160,7 @@ private fun Screen(
         VerticalPager(
             state = pagerState,
             beyondViewportPageCount = 1,
-            pageSize = sevenEighthsPageSize,
+            pageSize = fractionalPageSize,
             pageSpacing = dimensionResource(R.dimen.page_spacing),
             contentPadding = PaddingValues(dimensionResource(R.dimen.page_padding)),
             snapPosition = SnapPosition.Center,
@@ -167,6 +173,7 @@ private fun Screen(
                 isPlaying = uiState.isPlaying,
                 currentTimeMs = uiState.currentTime,
                 onPlayingChanged = onPlayingChanged,
+                onReplayTapped = onReplayTapped,
                 onTimeChange = onTimeChange,
                 onTimeFinalized = onTimeFinalized,
                 modifier = Modifier
@@ -185,6 +192,7 @@ private fun MediaPlayer(
     onTimeChange: ((Float) -> Unit),
     onTimeFinalized: (() -> Unit),
     onPlayingChanged: ((Boolean) -> Unit),
+    onReplayTapped: (() -> Unit),
     modifier: Modifier = Modifier,
 ) {
     ConstraintLayout(modifier = modifier) {
@@ -238,6 +246,7 @@ private fun MediaPlayer(
             onTimeChange = onTimeChange,
             onTimeFinalized = onTimeFinalized,
             onPlayingChanged = onPlayingChanged,
+            onReplayTapped = onReplayTapped,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = dimensionResource(R.dimen.large_padding))
@@ -260,6 +269,7 @@ private fun MediaControls(
     onTimeChange: ((Float) -> Unit),
     onTimeFinalized: (() -> Unit),
     onPlayingChanged: ((Boolean) -> Unit),
+    onReplayTapped: (() -> Unit),
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -270,6 +280,11 @@ private fun MediaControls(
             playing = playing,
             onPlayingChanged = onPlayingChanged,
         )
+
+        ReplayButton(
+            onReplayTapped = onReplayTapped,
+        )
+
         SeekBar(
             currentTimeMs = currentTimeMs,
             duration = duration,
@@ -307,6 +322,23 @@ private fun PlayPauseButton(
             )
         }
 
+    }
+}
+
+@Composable
+private fun ReplayButton(
+    onReplayTapped: (() -> Unit),
+    modifier: Modifier = Modifier,
+) {
+    IconButton(
+        onClick = onReplayTapped,
+        modifier = modifier,
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.replay),
+            tint = MaterialTheme.colorScheme.primary,
+            contentDescription = stringResource(R.string.replay),
+        )
     }
 }
 

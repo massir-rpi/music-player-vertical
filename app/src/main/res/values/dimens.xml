@@ -4,5 +4,5 @@
     <dimen name="page_padding">7dp</dimen>
     <dimen name="corner_clip">20dp</dimen>
     <dimen name="std_padding">16dp</dimen>
-    <dimen name="large_padding">50dp</dimen>
+    <dimen name="large_padding">32dp</dimen>
 </resources>

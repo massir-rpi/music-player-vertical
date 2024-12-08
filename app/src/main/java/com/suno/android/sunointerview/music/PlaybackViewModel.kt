@@ -72,6 +72,10 @@ class PlaybackViewModel @Inject constructor(
         sliderLock = false
     }
 
+    fun seekToStart() {
+        player.seekTo(0L)
+    }
+
     fun seekToMediaItem(index: Int) {
         // Load the next page of songs if we're near the end of the current page
         Log.d(SCREEN_NAME, "View model seekToMediaItem called with index $index on playlist of size ${player.mediaItemCount}")
