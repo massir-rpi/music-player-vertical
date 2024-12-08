@@ -31,8 +31,6 @@ class PlaybackViewModel @Inject constructor(
     fun setPlayer(player: ExoPlayer) {
         Log.d(SCREEN_NAME, "Setting player in view model")
         this.player = player
-        // Load first page and start playing the first song after setting the player
-        loadNextPage(0)
     }
 
     fun togglePlaying() {
@@ -47,7 +45,7 @@ class PlaybackViewModel @Inject constructor(
 
     fun seekToMediaItem(index: Int) {
         // Load the next page of songs if we're near the end of the current page
-        Log.d(SCREEN_NAME, "View model seekToMediaItem called wiht index $index on playlist of size ${player.mediaItemCount}")
+        Log.d(SCREEN_NAME, "View model seekToMediaItem called with index $index on playlist of size ${player.mediaItemCount}")
         if (index >= player.mediaItemCount - 2) {
             loadNextPage(index)
         } else {
@@ -63,10 +61,10 @@ class PlaybackViewModel @Inject constructor(
 
     private fun loadNextPage(indexSeekTo: Int) {
         viewModelScope.launch {
-            Log.d(SCREEN_NAME, "Loading next page")
+            Log.d(SCREEN_NAME, "Loading next page ($numPages)")
             musicRepository.getSongs(numPages, SONGS_PER_PAGE).body()?.songs?.let {
+                numSongs += it.size
                 numPages += 1
-                numSongs += SONGS_PER_PAGE
                 loadMediaIntoPlayer(it)
                 seekToMediaItem(indexSeekTo)
             }

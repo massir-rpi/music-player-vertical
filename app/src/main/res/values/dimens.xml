@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="page_spacing">7dp</dimen>
+    <dimen name="page_padding">7dp</dimen>
+    <dimen name="corner_clip">20dp</dimen>
+</resources>
