@@ -38,6 +38,16 @@ class PlaybackViewModel @Inject constructor(
     // Keep track of job updating time to ensure only one is ever running
     private var updateTimeJob: Job? = null
 
+    fun reset() {
+        numSongs = 0
+        numPages = 0
+        sliderLock = false
+        if (updateTimeJob?.isActive == true) {
+            updateTimeJob!!.cancel()
+            updateTimeJob = null
+        }
+    }
+
     fun setPlayer(player: ExoPlayer) {
         Log.d(SCREEN_NAME, "Setting player in view model")
         this.player = player
@@ -52,13 +62,38 @@ class PlaybackViewModel @Inject constructor(
         )
     }
 
-    fun togglePlaying() {
+    fun setPlaying(playing: Boolean) {
+        player.playWhenReady = playing
+        _uiStateFlow.value = _uiStateFlow.value.copy(
+            isPlaying = playing,
+        )
+    }
+
+    fun setLiked(isLiked: Boolean) {
         val uiState = _uiStateFlow.value
-        val notIsPlaying = !uiState.isPlaying
-        player.playWhenReady = notIsPlaying
+        val index = player.currentMediaItemIndex
+        val updatedMetadataList = uiState.metadataList.subList(0, index) +
+                uiState.metadataList[index].copy(
+                    isLiked = isLiked,
+                    isDisliked = false,
+                ) +
+                uiState.metadataList.subList(index + 1, uiState.metadataList.size)
         _uiStateFlow.value = uiState.copy(
-            isPlaying = notIsPlaying,
-            metadataList = uiState.metadataList,
+            metadataList = updatedMetadataList
+        )
+    }
+
+    fun setDisliked(isDisliked: Boolean) {
+        val uiState = _uiStateFlow.value
+        val index = player.currentMediaItemIndex
+        val updatedMetadataList = uiState.metadataList.subList(0, index) +
+                uiState.metadataList[index].copy(
+                    isLiked = false,
+                    isDisliked = isDisliked,
+                ) +
+                uiState.metadataList.subList(index + 1, uiState.metadataList.size)
+        _uiStateFlow.value = uiState.copy(
+            metadataList = updatedMetadataList
         )
     }
 
@@ -87,7 +122,7 @@ class PlaybackViewModel @Inject constructor(
             player.seekTo(index, C.TIME_UNSET)
             // Always auto-play next song
             if (!uiStateFlow.value.isPlaying) {
-                togglePlaying()
+                setPlaying(true)
             }
         }
     }
@@ -126,7 +161,7 @@ class PlaybackViewModel @Inject constructor(
                     MediaMetadata.Builder().apply {
                         song.title?.let { setTitle(it) }
                         song.imageUrl?.let { setArtworkUri(Uri.parse(it)) }
-                        song.displayName?.let { setArtist(it) }
+                        song.handle?.let { setArtist(it) }
                         song.metadata?.tags?.let { setDescription(it) }
                         song.metadata?.duration?.let { setDurationMs((it * MILLIS_IN_SECOND).toLong()) }
                     }.build()
@@ -134,13 +169,14 @@ class PlaybackViewModel @Inject constructor(
             }.build() to
             SongMetadata(
                 avatarImageUri = song.avatarImageUrl?.let { Uri.parse(it) },
-                authorName = song.displayName,
+                authorName = song.handle,
                 durationMs = song.metadata?.duration?.let { (it * MILLIS_IN_SECOND).toFloat() },
                 imageUri = song.imageUrl?.let { Uri.parse(it) },
-                isLiked = song.isLiked,
-                isDisliked = song.isTrashed,
+                isLiked = song.isLiked ?: false,
+                isDisliked = song.isTrashed ?: false,
                 title = song.title,
                 upvoteCount = song.upvoteCount,
+                shareUrl = song.videoUrl,
             )
         }
     }

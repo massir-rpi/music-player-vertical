@@ -9,10 +9,12 @@
     <dimen name="small_corner_clip">10dp</dimen>
 
     <!-- Padding -->
-    <dimen name="std_padding">16dp</dimen>
     <dimen name="large_padding">32dp</dimen>
-    <dimen name="small_padding">3dp</dimen>
+    <dimen name="medium_padding">16dp</dimen>
+    <dimen name="small_padding">10dp</dimen>
+    <dimen name="tiny_padding">3dp</dimen>
 
-    <!-- Misc -->
+    <!-- Size -->
     <dimen name="avatar_size">40dp</dimen>
+    <dimen name="side_button_size">50dp</dimen>
 </resources>

@@ -38,13 +38,13 @@ fun MediaControls(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier.then(Modifier.fillMaxWidth()),
     ) {
+        ReplayButton(
+            onReplayTapped = onReplayTapped,
+        )
+
         PlayPauseButton(
             playing = playing,
             onPlayingChanged = onPlayingChanged,
-        )
-
-        ReplayButton(
-            onReplayTapped = onReplayTapped,
         )
 
         SeekBar(
@@ -53,7 +53,7 @@ fun MediaControls(
             onTimeChange = onTimeChange,
             onTimeFinalized = onTimeFinalized,
             modifier = Modifier
-                .padding(end = dimensionResource(R.dimen.std_padding))
+                .padding(end = dimensionResource(R.dimen.medium_padding))
                 .fillMaxWidth(),
         )
     }

@@ -14,8 +14,9 @@ data class SongMetadata (
     val authorName: String? = null,
     val durationMs: Float? = null,
     val imageUri: Uri? = null,
-    val isLiked: Boolean? = null,
-    val isDisliked: Boolean? = null,
+    val isLiked: Boolean = false,
+    val isDisliked: Boolean = false,
     val title: String? = null,
     val upvoteCount: Int? = null,
+    val shareUrl: String? = null,
 )

@@ -3,47 +3,63 @@ package com.suno.android.sunointerview.music
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import androidx.annotation.OptIn
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.snapping.SnapPosition
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.PageSize
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Density
-import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.media3.common.util.UnstableApi
+import androidx.media3.common.Player
+import androidx.media3.common.Tracks
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.suno.android.sunointerview.R
-import com.suno.android.sunointerview.music.component.AuthorCard
 import com.suno.android.sunointerview.music.component.MediaControls
+import com.suno.android.sunointerview.music.component.SideButtons
+import com.suno.android.sunointerview.music.component.TitleAndAuthor
 import com.suno.android.sunointerview.ui.theme.SunoInterviewTheme
+import com.suno.android.sunointerview.utils.darken
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 private const val SCREEN_NAME = "PlaybackScreen"
 private const val PLAYER_HEIGHT_RATIO = 0.925F
+private const val PAGE_SCROLL_OFFSET = (1 - 1 / PLAYER_HEIGHT_RATIO) / 2
 
 private val fractionalPageSize = object : PageSize {
     override fun Density.calculateMainAxisPageSize(
@@ -61,24 +77,73 @@ fun PlaybackScreen(
 ) {
     val uiState by viewModel.uiStateFlow.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val pagerState = rememberPagerState { viewModel.numSongs }
+    val coroutineScope = rememberCoroutineScope()
 
+    // Build ExoPlayer
     LaunchedEffect(Unit) {
         Log.i(SCREEN_NAME, "Entered $SCREEN_NAME and building player for view model")
-        viewModel.setPlayer(buildPlayer(context))
+        val player = buildPlayer(context) {
+            coroutineScope.launch {
+                // Scroll pager state when player autoplays the next song
+                if (pagerState.currentPage != it) {
+                    Log.d(SCREEN_NAME, "Autoplaying and scrolling to song $it out of ${uiState.metadataList.size}")
+                    pagerState.animateScrollToPage(
+                        page = it,
+                        pageOffsetFraction = PAGE_SCROLL_OFFSET,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioLowBouncy,
+                            stiffness = Spring.StiffnessLow,
+                        ),
+                    )
+                }
+            }
+        }
+        viewModel.reset()
+        viewModel.setPlayer(player)
+
+        // Prevent leakage by tracking playback to view lifecycle
+        lifecycleOwner.lifecycle.addObserver(
+            object : DefaultLifecycleObserver {
+                override fun onStop(owner: LifecycleOwner) {
+                    viewModel.setPlaying(false)
+                    super.onStop(owner)
+                }
+                override fun onDestroy(owner: LifecycleOwner) {
+                    player.release()
+                    super.onDestroy(owner)
+                }
+
+                override fun onResume(owner: LifecycleOwner) {
+                    super.onResume(owner)
+                    viewModel.setPlaying(true)
+                }
+            }
+        )
     }
+
+    // Seek to song in playlist when scrolling through pager
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.currentPage }.collect { page ->
+            Log.d(SCREEN_NAME, "Selecting song $page out of ${uiState.metadataList.size}")
+            viewModel.seekToMediaItem(page)
+        }
+    }
+
 
     Screen(
         uiState = uiState,
-        onPlayingChanged = { viewModel.togglePlaying() },
+        pagerState = pagerState,
+        onPlayingChanged = { viewModel.setPlaying(it) },
         onReplayTapped = { viewModel.seekToStart() },
-        onPageSelected = { viewModel.seekToMediaItem(it) },
         onTimeChange = { viewModel.onSliderDrag(it) },
         onTimeFinalized = { viewModel.seekToSlider() },
-        getNumSongs = { viewModel.numSongs },
+        onLikeTapped = { viewModel.setLiked(it) },
+        onDislikeTapped = { viewModel.setDisliked(it) },
     )
 }
 
-@OptIn(UnstableApi::class)
 @Preview
 @Composable
 fun PlaybackScreenPreview() {
@@ -92,7 +157,9 @@ fun PlaybackScreenPreview() {
                         title = "I Spent 3000 Credits on This Song",
                         imageUri = Uri.parse("https://cdn1.suno.ai/ffa48fbf-ac87-4a02-8cf2-f3766f518d58_c134aeb8.png"),
                         authorName = "nanashi_zero",
+                        isLiked = true,
                         durationMs = 184920F,
+                        upvoteCount = 6851,
                     ),
                     SongMetadata(
                         title = "Chemical Elements",
@@ -108,12 +175,13 @@ fun PlaybackScreenPreview() {
                     ),
                 ),
             ),
+            pagerState = rememberPagerState(1) { 10 },
             onPlayingChanged = {},
             onReplayTapped = {},
-            onPageSelected = {},
             onTimeChange = {},
             onTimeFinalized = {},
-            getNumSongs = { 10 },
+            onLikeTapped = {},
+            onDislikeTapped = {},
         )
     }
 }
@@ -121,12 +189,13 @@ fun PlaybackScreenPreview() {
 @Composable
 private fun Screen(
     uiState: PlaybackUiState,
+    pagerState: PagerState,
     onPlayingChanged: ((Boolean) -> Unit),
     onReplayTapped: (() -> Unit),
-    onPageSelected: ((Int) -> Unit),
     onTimeChange: ((Float) -> Unit),
     onTimeFinalized: (() -> Unit),
-    getNumSongs: (() -> Int),
+    onLikeTapped: ((Boolean) -> Unit),
+    onDislikeTapped: ((Boolean) -> Unit),
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -134,16 +203,6 @@ private fun Screen(
             Modifier.fillMaxSize()
         ),
     ) { innerPadding ->
-        val pagerState = rememberPagerState { getNumSongs() }
-
-        // Seek to song in playlist when scrolling through pager
-        LaunchedEffect(pagerState) {
-            snapshotFlow { pagerState.currentPage }.collect { page ->
-                Log.d(SCREEN_NAME, "Selecting song $page out of ${uiState.metadataList.size}")
-                onPageSelected(page)
-            }
-        }
-
         VerticalPager(
             state = pagerState,
             beyondViewportPageCount = 1,
@@ -163,14 +222,15 @@ private fun Screen(
                 onReplayTapped = onReplayTapped,
                 onTimeChange = onTimeChange,
                 onTimeFinalized = onTimeFinalized,
+                onLikeTapped = onLikeTapped,
+                onDislikeTapped = onDislikeTapped,
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxSize(),
             )
         }
     }
 }
 
-@OptIn(UnstableApi::class)
 @Composable
 private fun MediaPlayer(
     metadata: SongMetadata,
@@ -180,10 +240,15 @@ private fun MediaPlayer(
     onTimeFinalized: (() -> Unit),
     onPlayingChanged: ((Boolean) -> Unit),
     onReplayTapped: (() -> Unit),
+    onLikeTapped: ((Boolean) -> Unit),
+    onDislikeTapped: ((Boolean) -> Unit),
     modifier: Modifier = Modifier,
 ) {
-    ConstraintLayout(modifier = modifier) {
-        val (imageRef, titleRef, authorRef, controlsRef) = createRefs()
+    Box(
+        modifier = modifier.then(
+            Modifier.clip(RoundedCornerShape(dimensionResource(R.dimen.large_corner_clip))),
+        ),
+    ) {
         val titleString = metadata.title?.let { remember { it } }
 
         metadata.imageUri?.let { imageUri ->
@@ -201,69 +266,81 @@ private fun MediaPlayer(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(RoundedCornerShape(dimensionResource(R.dimen.large_corner_clip)))
-                    .constrainAs(imageRef) {
-                        linkTo(
-                            start = parent.start,
-                            top = parent.top,
-                            end = parent.end,
-                            bottom = parent.bottom,
-                        )
-                    },
             )
         }
 
-        titleString?.let {
-            Text(
-                text = it,
-                style = MaterialTheme.typography.titleLarge,
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .background(
+                    Brush.verticalGradient(
+                        colorStops = arrayOf(
+                            0.00F to Color.Transparent,
+                            0.25F to MaterialTheme.colorScheme.primaryContainer.darken().copy(alpha = 0.625F),
+                            1.00F to MaterialTheme.colorScheme.primaryContainer.darken().copy(alpha = 0.9375F),
+                        ),
+                    ),
+                ),
+        ) {
+            Row(
+                verticalAlignment = Alignment.Bottom,
                 modifier = Modifier
-                    .padding(dimensionResource(R.dimen.std_padding))
-                    .constrainAs(titleRef) {
-                        start.linkTo(parent.start)
-                        bottom.linkTo(authorRef.top)
-                    },
+                    .padding(
+                        start = dimensionResource(R.dimen.medium_padding),
+                        top = dimensionResource(R.dimen.medium_padding),
+                        end = dimensionResource(R.dimen.small_padding),
+                        bottom = dimensionResource(R.dimen.small_padding),
+                    )
+            ) {
+                TitleAndAuthor(
+                    title = titleString,
+                    avatarImageUri = metadata.avatarImageUri,
+                    authorName = metadata.authorName,
+                    modifier = Modifier
+                        .padding(
+                            bottom = dimensionResource(R.dimen.large_padding)
+                        )
+                        .weight(1F),
+                )
+
+                SideButtons(
+                    upvoteCount = metadata.upvoteCount,
+                    shareUrl = metadata.shareUrl,
+                    isLiked = metadata.isLiked,
+                    isDisliked = metadata.isDisliked,
+                    onLikeTapped = onLikeTapped,
+                    onDislikeTapped = onDislikeTapped,
+                    modifier = Modifier
+                        .padding(start = dimensionResource(R.dimen.tiny_padding)),
+                )
+            }
+
+            MediaControls(
+                playing = isPlaying,
+                currentTimeMs = currentTimeMs,
+                duration = metadata.durationMs,
+                onTimeChange = onTimeChange,
+                onTimeFinalized = onTimeFinalized,
+                onPlayingChanged = onPlayingChanged,
+                onReplayTapped = onReplayTapped,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = dimensionResource(R.dimen.large_padding)),
             )
         }
-
-        AuthorCard(
-            avatarImageUri = metadata.avatarImageUri,
-            authorName = metadata.authorName,
-            modifier = Modifier
-                .padding(
-                    start = dimensionResource(R.dimen.std_padding),
-                    end = dimensionResource(R.dimen.std_padding),
-                    bottom = dimensionResource(R.dimen.large_padding),
-                )
-                .constrainAs(authorRef) {
-                    start.linkTo(parent.start)
-                    bottom.linkTo(controlsRef.top)
-                }
-        )
-
-        MediaControls(
-            playing = isPlaying,
-            currentTimeMs = currentTimeMs,
-            duration = metadata.durationMs,
-            onTimeChange = onTimeChange,
-            onTimeFinalized = onTimeFinalized,
-            onPlayingChanged = onPlayingChanged,
-            onReplayTapped = onReplayTapped,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = dimensionResource(R.dimen.large_padding))
-                .constrainAs(controlsRef) {
-                    linkTo(
-                        start = parent.start,
-                        end = parent.end,
-                    )
-                    bottom.linkTo(parent.bottom)
-                },
-        )
     }
 }
 
-private fun buildPlayer(context: Context) = ExoPlayer.Builder(context).build().apply {
-    // video will not be rendered since this is audio playback
+private fun buildPlayer(context: Context, onCurrentMediaChanged: ((Int) -> Unit)) = ExoPlayer.Builder(context).build().apply {
+    // Video will not be rendered since this is audio playback
     setVideoSurface(null)
+    // Ensure we scroll to next page when automatically playing next song
+    addListener(
+        object : Player.Listener {
+            override fun onTracksChanged(tracks: Tracks) {
+                super.onTracksChanged(tracks)
+                onCurrentMediaChanged(currentMediaItemIndex)
+            }
+        }
+    )
 }

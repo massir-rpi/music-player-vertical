@@ -2,10 +2,11 @@ package com.suno.android.sunointerview.music.component
 
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -22,7 +23,35 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.suno.android.sunointerview.R
 
-private const val CARD_OPACITY = 0.5F
+private const val CARD_SURFACE_OPACITY = 0.5F
+
+@Composable
+fun TitleAndAuthor(
+    title: String?,
+    avatarImageUri: Uri?,
+    authorName: String?,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier)  {
+        title?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier
+                    .padding(
+                        bottom = dimensionResource(R.dimen.small_padding),
+                    ),
+            )
+        }
+
+        AuthorCard(
+            avatarImageUri = avatarImageUri,
+            authorName = authorName,
+            modifier = Modifier
+                .wrapContentWidth(),
+        )
+    }
+}
 
 @Composable
 fun AuthorCard(
@@ -35,10 +64,9 @@ fun AuthorCard(
         modifier = modifier.then(
             Modifier
                 .background(
-                    color = MaterialTheme.colorScheme.background.copy(alpha = CARD_OPACITY),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = CARD_SURFACE_OPACITY),
                     shape = RoundedCornerShape(dimensionResource(R.dimen.small_corner_clip))
-                )
-                .height(dimensionResource(R.dimen.avatar_size))
+                ),
         ),
     ) {
         AuthorAvatar(
@@ -46,7 +74,7 @@ fun AuthorCard(
             authorName = authorName,
             modifier = Modifier
                 .size(dimensionResource(R.dimen.avatar_size))
-                .padding(dimensionResource(R.dimen.small_padding)),
+                .padding(dimensionResource(R.dimen.tiny_padding)),
         )
 
         authorName?.let { name ->
@@ -54,7 +82,7 @@ fun AuthorCard(
                 text = name,
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier
-                    .padding(dimensionResource(R.dimen.small_padding)),
+                    .padding(dimensionResource(R.dimen.tiny_padding)),
             )
         }
     }
