@@ -84,7 +84,11 @@ fun PlaybackScreen(
     // Build ExoPlayer
     LaunchedEffect(Unit) {
         Log.i(SCREEN_NAME, "Entered $SCREEN_NAME and building player for view model")
-        val player = buildPlayer(context) {
+        val player = buildPlayer(
+            context = context,
+            lifecycleOwner = lifecycleOwner,
+            setPlaying = { viewModel.setPlaying(it) },
+        ) {
             coroutineScope.launch {
                 // Scroll pager state when player autoplays the next song
                 if (pagerState.currentPage != it) {
@@ -102,25 +106,6 @@ fun PlaybackScreen(
         }
         viewModel.reset()
         viewModel.setPlayer(player)
-
-        // Prevent leakage by tracking playback to view lifecycle
-        lifecycleOwner.lifecycle.addObserver(
-            object : DefaultLifecycleObserver {
-                override fun onStop(owner: LifecycleOwner) {
-                    viewModel.setPlaying(false)
-                    super.onStop(owner)
-                }
-                override fun onDestroy(owner: LifecycleOwner) {
-                    player.release()
-                    super.onDestroy(owner)
-                }
-
-                override fun onResume(owner: LifecycleOwner) {
-                    super.onResume(owner)
-                    viewModel.setPlaying(true)
-                }
-            }
-        )
     }
 
     // Seek to song in playlist when scrolling through pager
@@ -276,8 +261,12 @@ private fun MediaPlayer(
                     Brush.verticalGradient(
                         colorStops = arrayOf(
                             0.00F to Color.Transparent,
-                            0.25F to MaterialTheme.colorScheme.primaryContainer.darken().copy(alpha = 0.625F),
-                            1.00F to MaterialTheme.colorScheme.primaryContainer.darken().copy(alpha = 0.9375F),
+                            0.25F to MaterialTheme.colorScheme.primaryContainer
+                                .darken()
+                                .copy(alpha = 0.625F),
+                            1.00F to MaterialTheme.colorScheme.primaryContainer
+                                .darken()
+                                .copy(alpha = 0.9375F),
                         ),
                     ),
                 ),
@@ -331,7 +320,12 @@ private fun MediaPlayer(
     }
 }
 
-private fun buildPlayer(context: Context, onCurrentMediaChanged: ((Int) -> Unit)) = ExoPlayer.Builder(context).build().apply {
+private fun buildPlayer(
+    context: Context,
+    lifecycleOwner: LifecycleOwner,
+    setPlaying: ((Boolean) -> Unit),
+    onCurrentMediaChanged: ((Int) -> Unit),
+) = ExoPlayer.Builder(context).build().apply {
     // Video will not be rendered since this is audio playback
     setVideoSurface(null)
     // Ensure we scroll to next page when automatically playing next song
@@ -340,6 +334,24 @@ private fun buildPlayer(context: Context, onCurrentMediaChanged: ((Int) -> Unit)
             override fun onTracksChanged(tracks: Tracks) {
                 super.onTracksChanged(tracks)
                 onCurrentMediaChanged(currentMediaItemIndex)
+            }
+        }
+    )
+    // Prevent leakage by tracking playback to view lifecycle
+    lifecycleOwner.lifecycle.addObserver(
+        object : DefaultLifecycleObserver {
+            override fun onStop(owner: LifecycleOwner) {
+                setPlaying(false)
+                super.onStop(owner)
+            }
+            override fun onDestroy(owner: LifecycleOwner) {
+                release()
+                super.onDestroy(owner)
+            }
+
+            override fun onResume(owner: LifecycleOwner) {
+                super.onResume(owner)
+                setPlaying(true)
             }
         }
     )
