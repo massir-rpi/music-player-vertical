@@ -9,8 +9,11 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
+import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.MediaController
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.MoreExecutors
 import com.suno.android.sunointerview.api.Song
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -23,36 +26,32 @@ import javax.inject.Inject
 @HiltViewModel
 class PlaybackViewModel @Inject constructor(
     private val musicRepository: MusicRepository,
+    private val future: ListenableFuture<MediaController>,
 ) : ViewModel() {
     private val _uiStateFlow = MutableStateFlow(PlaybackUiState())
     val uiStateFlow = _uiStateFlow.asStateFlow()
 
-    private lateinit var player: ExoPlayer
+    private var player: Player? = null
 
     private var numPages = 0
-    var numSongs = 0
-        private set
 
     // Lock to prevent the player from updating the slider value while the user is changing the value
     private var sliderLock = false
     // Keep track of job updating time to ensure only one is ever running
     private var updateTimeJob: Job? = null
 
-    fun reset() {
-        numSongs = 0
-        numPages = 0
-        sliderLock = false
-        if (updateTimeJob?.isActive == true) {
-            updateTimeJob!!.cancel()
-            updateTimeJob = null
-        }
+    init {
+        future.addListener(
+            { setPlayer(future.get()) },
+            MoreExecutors.directExecutor(),
+        )
     }
 
-    fun setPlayer(player: ExoPlayer) {
+    private fun setPlayer(player: Player?) {
         Log.d(SCREEN_NAME, "Setting player in view model")
         this.player = player
 
-        player.addListener(
+        player?.addListener(
             object : Player.Listener {
                 override fun onPlaybackStateChanged(playbackState: Int) {
                     super.onPlaybackStateChanged(playbackState)
@@ -62,8 +61,21 @@ class PlaybackViewModel @Inject constructor(
         )
     }
 
+    fun onTracksChanged(onCurrentMediaChanged: ((Int) -> Unit)) {
+        player?.let {
+            it.addListener(
+                object : Player.Listener {
+                    override fun onTracksChanged(tracks: Tracks) {
+                        super.onTracksChanged(tracks)
+                        onCurrentMediaChanged(it.currentMediaItemIndex)
+                    }
+                }
+            )
+        }
+    }
+
     fun setPlaying(playing: Boolean) {
-        player.playWhenReady = playing
+        player?.playWhenReady = playing
         _uiStateFlow.value = _uiStateFlow.value.copy(
             isPlaying = playing,
         )
@@ -71,30 +83,32 @@ class PlaybackViewModel @Inject constructor(
 
     fun setLiked(isLiked: Boolean) {
         val uiState = _uiStateFlow.value
-        val index = player.currentMediaItemIndex
-        val updatedMetadataList = uiState.metadataList.subList(0, index) +
-                uiState.metadataList[index].copy(
-                    isLiked = isLiked,
-                    isDisliked = false,
-                ) +
-                uiState.metadataList.subList(index + 1, uiState.metadataList.size)
-        _uiStateFlow.value = uiState.copy(
-            metadataList = updatedMetadataList
-        )
+        player?.currentMediaItemIndex?.let { index ->
+            val updatedMetadataList = uiState.metadataList.subList(0, index) +
+                    uiState.metadataList[index].copy(
+                        isLiked = isLiked,
+                        isDisliked = false,
+                    ) +
+                    uiState.metadataList.subList(index + 1, uiState.metadataList.size)
+            _uiStateFlow.value = uiState.copy(
+                metadataList = updatedMetadataList
+            )
+        }
     }
 
     fun setDisliked(isDisliked: Boolean) {
         val uiState = _uiStateFlow.value
-        val index = player.currentMediaItemIndex
-        val updatedMetadataList = uiState.metadataList.subList(0, index) +
-                uiState.metadataList[index].copy(
-                    isLiked = false,
-                    isDisliked = isDisliked,
-                ) +
-                uiState.metadataList.subList(index + 1, uiState.metadataList.size)
-        _uiStateFlow.value = uiState.copy(
-            metadataList = updatedMetadataList
-        )
+        player?.currentMediaItemIndex?.let { index ->
+            val updatedMetadataList = uiState.metadataList.subList(0, index) +
+                    uiState.metadataList[index].copy(
+                        isLiked = false,
+                        isDisliked = isDisliked,
+                    ) +
+                    uiState.metadataList.subList(index + 1, uiState.metadataList.size)
+            _uiStateFlow.value = uiState.copy(
+                metadataList = updatedMetadataList
+            )
+        }
     }
 
     fun onSliderDrag(timeMs: Float) {
@@ -103,27 +117,28 @@ class PlaybackViewModel @Inject constructor(
     }
 
     fun seekToSlider() {
-        player.seekTo(_uiStateFlow.value.currentTime.toLong())
+        player?.seekTo(_uiStateFlow.value.currentTime.toLong())
         sliderLock = false
     }
 
     fun seekToStart() {
-        player.seekTo(0L)
+        player?.seekTo(0L)
     }
 
     fun seekToMediaItem(index: Int) {
         // Load the next page of songs if we're near the end of the current page
-        Log.d(SCREEN_NAME, "View model seekToMediaItem called with index $index on playlist of size ${player.mediaItemCount}")
-        if (index >= player.mediaItemCount - 2) {
+        Log.d(SCREEN_NAME, "View model seekToMediaItem called with index $index on playlist of size ${player?.mediaItemCount}")
+        if (player?.mediaItemCount?.let {index >= it - 1} != false) {
             loadNextPage(index)
         } else {
             // Seek to the song at the given index
-            Log.d(SCREEN_NAME, "Seeking to $index in playlist of size ${player.mediaItemCount}")
-            player.seekTo(index, C.TIME_UNSET)
+            Log.d(SCREEN_NAME, "Seeking to $index in playlist of size ${player?.mediaItemCount}")
+            player?.seekTo(index, C.TIME_UNSET)
             // Always auto-play next song
             if (!uiStateFlow.value.isPlaying) {
                 setPlaying(true)
             }
+            Log.d(SCREEN_NAME, "num pages: ${uiStateFlow.value.metadataList.size}")
         }
     }
 
@@ -131,7 +146,6 @@ class PlaybackViewModel @Inject constructor(
         viewModelScope.launch {
             Log.d(SCREEN_NAME, "Loading next page ($numPages)")
             musicRepository.getSongs(numPages, SONGS_PER_PAGE).body()?.songs?.let {
-                numSongs += it.size
                 numPages += 1
                 loadMediaIntoPlayer(it)
                 seekToMediaItem(indexSeekTo)
@@ -141,13 +155,22 @@ class PlaybackViewModel @Inject constructor(
 
     private fun loadMediaIntoPlayer(songs: List<Song?>) {
         Log.d(SCREEN_NAME, "Adding page to media list and preparing for playback")
-        // Map API response objects to Media3 MediaItems
+        // Map API response objects to Media3 MediaItems and UI consumable SongMetadata
         val mediaList = songsToMediaList(songs)
-        // Add MediaItems to the playlist and prepare the player
-        player.addMediaItems(mediaList.map { it.first })
-        player.prepare()
-        // Autoplay the next song
-        player.playWhenReady = true
+        // Add listener to future so we can queue songs before player initializes
+        future.addListener(
+            {
+                future.get().apply {
+                    // Add MediaItems to the playlist and prepare the player
+                    addMediaItems(mediaList.map { it.first })
+                    prepare()
+                    // Autoplay the next song
+                    playWhenReady = true
+                }
+            },
+            MoreExecutors.directExecutor(),
+        )
+        // Make metadata available to UI
         updateUiMediaList(mediaList.map { it.second })
     }
 
@@ -190,21 +213,23 @@ class PlaybackViewModel @Inject constructor(
         )
     }
 
-    private fun updateUiCurrentTime(timeMs: Long) {
+    private fun updateUiCurrentTime(timeMs: Long?) {
         val uiState = _uiStateFlow.value
-        _uiStateFlow.value = uiState.copy(
-            currentTime = timeMs.toFloat(),
-        )
+        timeMs?.toFloat()?.let {
+            _uiStateFlow.value = uiState.copy(
+                currentTime = it,
+            )
+        }
     }
 
     private fun updateCurrentTime() {
         // Set current time to the player's position if the user isn't dragging the seek bar
         if (!sliderLock) {
-            updateUiCurrentTime(player.currentPosition)
+            updateUiCurrentTime(player?.currentPosition)
         }
 
         // If playing, update time again in one second
-        val playerState = player.playbackState
+        val playerState = player?.playbackState
         if (playerState != Player.STATE_IDLE && playerState != Player.STATE_ENDED) {
             // If there's already a timer running, cancel it
             if (updateTimeJob?.isActive == true) {

@@ -1,10 +1,8 @@
 [versions]
 agp = "8.7.3"
-animation = "1.7.5"
 browser = "1.8.0"
 datastorePreferencesCore = "1.1.1"
 flowCallAdapterFactory = "1.0.0"
-foundation = "1.7.5"
 kotlin = "2.0.0"
 coreKtx = "1.15.0"
 junit = "4.13.2"
@@ -12,7 +10,7 @@ junitVersion = "1.2.1"
 espressoCore = "3.6.1"
 lifecycleRuntimeKtx = "2.8.7"
 activityCompose = "1.9.3"
-composeBom = "2024.11.00"
+composeBom = "2024.12.01"
 constraintLayout = "1.1.0"
 appcompat = "1.7.0"
 material = "1.12.0"
@@ -25,22 +23,19 @@ androidxCoreTesting = "2.2.0"
 exoplayer = "1.5.0"
 media3Common = "1.5.0"
 coil = "2.6.0"
-navigationCompose = "2.8.4"
+navigation = "2.8.5"
 hiltNavigationCompose = "1.2.0"
 cast = "22.0.0"
 roomVersion = "2.6.1"
-ui = "1.7.5"
-uiTooling = "1.7.5"
-navigationRuntimeKtx = "2.8.4"
 
 
 [libraries]
-androidx-animation = { module = "androidx.compose.animation:animation", version.ref = "animation" }
+androidx-animation = { module = "androidx.compose.animation:animation" }
 androidx-browser = { module = "androidx.browser:browser", version.ref = "browser" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastorePreferencesCore" }
 androidx-datastore-preferences-core = { module = "androidx.datastore:datastore-preferences-core", version.ref = "datastorePreferencesCore" }
-androidx-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "foundation" }
+androidx-foundation = { module = "androidx.compose.foundation:foundation" }
 androidx-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "roomVersion" }
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "roomVersion" }
@@ -56,13 +51,13 @@ androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecyc
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 androidx-compose-constraint_layout = { group = "androidx.constraintlayout", name = "constraintlayout-compose", version.ref = "constraintLayout"}
-androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
-androidx-navigation-runtime-ktx = { group = "androidx.navigation", name = "navigation-runtime-ktx", version.ref = "navigationRuntimeKtx" }
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
+androidx-navigation-runtime-ktx = { group = "androidx.navigation", name = "navigation-runtime-ktx", version.ref = "navigation" }
 androidx-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
 androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
-androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest", version = "1.7.5" }
+androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }

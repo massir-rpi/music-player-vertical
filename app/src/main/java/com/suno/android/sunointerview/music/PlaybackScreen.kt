@@ -1,6 +1,5 @@
 package com.suno.android.sunointerview.music
 
-import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.compose.animation.core.Spring
@@ -38,13 +37,7 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Density
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.DefaultLifecycleObserver
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.media3.common.Player
-import androidx.media3.common.Tracks
-import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -76,19 +69,13 @@ fun PlaybackScreen(
     viewModel: PlaybackViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiStateFlow.collectAsStateWithLifecycle()
-    val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val pagerState = rememberPagerState { viewModel.numSongs }
+    val pagerState = rememberPagerState { uiState.metadataList.size }
     val coroutineScope = rememberCoroutineScope()
 
-    // Build ExoPlayer
+    // Connect ExoPlayer to scroll state
     LaunchedEffect(Unit) {
-        Log.i(SCREEN_NAME, "Entered $SCREEN_NAME and building player for view model")
-        val player = buildPlayer(
-            context = context,
-            lifecycleOwner = lifecycleOwner,
-            setPlaying = { viewModel.setPlaying(it) },
-        ) {
+        Log.i(SCREEN_NAME, "Entered $SCREEN_NAME")
+        viewModel.onTracksChanged {
             coroutineScope.launch {
                 // Scroll pager state when player autoplays the next song
                 if (pagerState.currentPage != it) {
@@ -104,8 +91,6 @@ fun PlaybackScreen(
                 }
             }
         }
-        viewModel.reset()
-        viewModel.setPlayer(player)
     }
 
     // Seek to song in playlist when scrolling through pager
@@ -200,7 +185,8 @@ private fun Screen(
                 .padding(innerPadding),
         ) {
             MediaPlayer(
-                metadata = uiState.metadataList[it],
+                // This is necessary because the PagerState gets the updated metadataList before these components further down the composition tree
+                metadata = if (it < uiState.metadataList.size) uiState.metadataList[it] else SongMetadata(),
                 isPlaying = uiState.isPlaying,
                 currentTimeMs = uiState.currentTime,
                 onPlayingChanged = onPlayingChanged,
@@ -318,41 +304,4 @@ private fun MediaPlayer(
             )
         }
     }
-}
-
-private fun buildPlayer(
-    context: Context,
-    lifecycleOwner: LifecycleOwner,
-    setPlaying: ((Boolean) -> Unit),
-    onCurrentMediaChanged: ((Int) -> Unit),
-) = ExoPlayer.Builder(context).build().apply {
-    // Video will not be rendered since this is audio playback
-    setVideoSurface(null)
-    // Ensure we scroll to next page when automatically playing next song
-    addListener(
-        object : Player.Listener {
-            override fun onTracksChanged(tracks: Tracks) {
-                super.onTracksChanged(tracks)
-                onCurrentMediaChanged(currentMediaItemIndex)
-            }
-        }
-    )
-    // Prevent leakage by tracking playback to view lifecycle
-    lifecycleOwner.lifecycle.addObserver(
-        object : DefaultLifecycleObserver {
-            override fun onStop(owner: LifecycleOwner) {
-                setPlaying(false)
-                super.onStop(owner)
-            }
-            override fun onDestroy(owner: LifecycleOwner) {
-                release()
-                super.onDestroy(owner)
-            }
-
-            override fun onResume(owner: LifecycleOwner) {
-                super.onResume(owner)
-                setPlaying(true)
-            }
-        }
-    )
 }
