@@ -1,4 +1,4 @@
-# Suno Interview Android App 
+# Vertically Paged Music Player App 
 This is a vertically paged music player for Android that fetches from Suno AI's test endpoint. Made by Richard Massimilla. 
 
 ## Core features 
